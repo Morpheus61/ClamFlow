@@ -1,20 +1,23 @@
 import { initializeApp } from 'firebase/app';
 import { getFirestore, enableIndexedDbPersistence } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
+import { getAuth } from 'firebase/auth';
 
 const firebaseConfig = {
-  apiKey: "AIzaSyC5iYMq9VUkpIivk6pGte7qVa6P0aOEGjo",
-  authDomain: "Clam.firebaseapp.com",
-  projectId: "relish-clam",
-  storageBucket: "relish-clam.firebasestorage.app",
-  messagingSenderId: "355823759831",
-  appId: "1:355823759831:web:5a2c8ca466d32befa25b92"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 };
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const storage = getStorage(app);
+const auth = getAuth(app);
 
 // Enable offline persistence
 enableIndexedDbPersistence(db)
@@ -26,4 +29,4 @@ enableIndexedDbPersistence(db)
     }
   });
 
-export { app, db, storage };
+export { app, db, storage, auth };
