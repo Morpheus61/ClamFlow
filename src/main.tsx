@@ -1,6 +1,7 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { FirebaseProvider } from './components/providers/FirebaseProvider';
 import App from './App';
 import './index.css';
 
@@ -19,7 +20,9 @@ if (!rootElement) throw new Error('Root element not found');
 createRoot(rootElement).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
-      <App />
+      <FirebaseProvider>
+        <App />
+      </FirebaseProvider>
     </QueryClientProvider>
   </StrictMode>
 );

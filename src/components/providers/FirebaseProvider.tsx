@@ -1,10 +1,13 @@
-import React, { createContext, useContext, ReactNode, useEffect, useState } from 'react';
-import { Firestore, enableIndexedDbPersistence } from '@firebase/firestore';
+import { ReactNode, useEffect, useState, createContext, useContext } from 'react';
+import { Firestore } from '@firebase/firestore';
 import { Storage } from '@firebase/storage';
 import { Analytics } from '@firebase/analytics';
-import { db, storage, analytics } from '../../lib/firebase';
+import { Auth } from '@firebase/auth';
+import { app, auth, db, storage, analytics } from '../../lib/firebase';
 
 interface FirebaseContextType {
+  app: any;
+  auth: Auth;
   db: Firestore;
   storage: Storage;
   analytics: Analytics | null;
@@ -13,13 +16,13 @@ interface FirebaseContextType {
 
 const FirebaseContext = createContext<FirebaseContextType | null>(null);
 
-export function useFirebase() {
+export const useFirebase = () => {
   const context = useContext(FirebaseContext);
   if (!context) {
     throw new Error('useFirebase must be used within a FirebaseProvider');
   }
   return context;
-}
+};
 
 interface FirebaseProviderProps {
   children: ReactNode;
@@ -27,46 +30,60 @@ interface FirebaseProviderProps {
 
 export function FirebaseProvider({ children }: FirebaseProviderProps) {
   const [initialized, setInitialized] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
-    const initializeFirestore = async () => {
-      try {
-        await enableIndexedDbPersistence(db);
-        console.log('Offline persistence enabled');
-      } catch (err: any) {
-        if (err.code === 'failed-precondition') {
-          console.warn('Multiple tabs open, persistence enabled in first tab only');
-        } else if (err.code === 'unimplemented') {
-          console.warn('Browser doesn\'t support persistence');
-        }
-      } finally {
-        setInitialized(true);
+    try {
+      // Verify Firebase is initialized
+      if (!app || !auth || !db || !storage) {
+        throw new Error('Firebase services not properly initialized');
       }
-    };
 
-    initializeFirestore();
+      // Listen for auth state changes
+      const unsubscribe = auth.onAuthStateChanged(() => {
+        setInitialized(true);
+      }, (error) => {
+        setError(error);
+        console.error('Auth state change error:', error);
+      });
+
+      return () => unsubscribe();
+    } catch (err) {
+      setError(err instanceof Error ? err : new Error('Unknown error during Firebase initialization'));
+      console.error('Firebase initialization error:', err);
+    }
   }, []);
 
-  const value = React.useMemo(() => ({
-    db,
-    storage,
-    analytics,
-    initialized
-  }), [initialized]);
-
-  if (!initialized) {
+  if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Initializing app...</p>
+      <div className="min-h-screen flex items-center justify-center bg-red-50">
+        <div className="text-center p-4">
+          <div className="text-red-600 text-xl mb-2">Failed to initialize app</div>
+          <div className="text-red-500">{error.message}</div>
         </div>
       </div>
     );
   }
 
+  if (!initialized) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+
   return (
-    <FirebaseContext.Provider value={value}>
+    <FirebaseContext.Provider 
+      value={{ 
+        app, 
+        auth, 
+        db, 
+        storage, 
+        analytics, 
+        initialized 
+      }}
+    >
       {children}
     </FirebaseContext.Provider>
   );
